@@ -37,7 +37,7 @@ export function Layout() {
             className="flex shrink-0 items-center gap-2"
             data-ocid="brand_link"
           >
-            <Flame className="size-5 text-primary" aria-hidden="true" />
+            <Flame className="size-8 text-primary" aria-hidden="true" />
             <span className="font-display text-base font-semibold tracking-tight text-gradient sm:text-lg">
               BEFORE WE DIE
             </span>
