@@ -18,6 +18,7 @@ const navItems = [
   { to: "/people", label: "People" },
   { to: "/vault", label: "Vault" },
   { to: "/one-day", label: "ONE DAY" },
+  { to: "/you", label: "You" },
 ] as const;
 
 export function Layout() {
