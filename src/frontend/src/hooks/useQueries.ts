@@ -69,14 +69,15 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: async (profile: Partial<UserProfile>): Promise<void> => {
       const me = getMyIdentity();
-      const newName = profile.displayName || me.name;
+      const oldName = me.name;
+      const newName = profile.displayName ? profile.displayName.trim() : oldName;
       localStorage.setItem("bwd_user_name", newName);
 
       const payload: Record<string, any> = {
         id: me.id,
         updated_at: Date.now(),
       };
-      if (profile.displayName !== undefined) payload.display_name = profile.displayName;
+      if (profile.displayName !== undefined) payload.display_name = newName;
       if (profile.avatarUrl !== undefined) payload.avatar_url = profile.avatarUrl;
       if (profile.dob !== undefined) payload.dob = profile.dob;
       if (profile.bio !== undefined) payload.bio = profile.bio;
@@ -84,17 +85,22 @@ export function useUpdateProfile() {
       const { error } = await supabase.from("profiles").upsert(payload);
       if (error) throw error;
 
-      // Update name in members table so collaborative members see it
-      if (profile.displayName) {
+      if (profile.displayName && oldName !== newName) {
         await supabase
           .from("members")
-          .update({ user_name: profile.displayName })
-          .eq("id_str", me.id);
+          .update({ user_name: newName })
+          .eq("user_name", oldName);
+
+        await supabase
+          .from("journals")
+          .update({ owner: newName })
+          .eq("owner", oldName);
       }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["myProfile"] });
       void queryClient.invalidateQueries({ queryKey: ["members"] });
+      void queryClient.invalidateQueries({ queryKey: ["journals"] });
     },
   });
 }
@@ -205,165 +211,38 @@ export function useJournal(journalId: JournalId | null) {
 
 // ----------------- MEMBERS -----------------
 
-import { JournalSwitcher } from "@/components/JournalSwitcher";
-import { Landing } from "@/components/Landing";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { useInternetIdentity } from "@caffeineai/core-infrastructure";
-import { Link, Outlet } from "@tanstack/react-router";
-import { Flame, Menu } from "lucide-react";
-import { useState } from "react";
+export function useMembers(journalId: JournalId | null) {
+  return useQuery({
+    queryKey: ["members", journalId ? String(journalId) : null],
+    queryFn: async (): Promise<Member[]> => {
+      if (!journalId) return [];
 
-const navItems = [
-  { to: "/", label: "Dashboard" },
-  { to: "/people", label: "People" },
-  { to: "/vault", label: "Vault" },
-  { to: "/one-day", label: "ONE DAY" },
-  { to: "/you", label: "You" },
-] as const;
+      const { data: members, error: mError } = await supabase
+        .from("members")
+        .select("*")
+        .eq("journal_id", String(journalId))
+        .order("joined_at", { ascending: true });
 
-export function Layout() {
-  const { isAuthenticated, clear } = useInternetIdentity();
-  const [menuOpen, setMenuOpen] = useState(false);
+      if (mError || !members) return [];
 
-  if (!isAuthenticated) {
-    return <Landing />;
-  }
+      const me = getMyIdentity();
+      const currentStoredName = localStorage.getItem("bwd_user_name") || me.name;
 
-  return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b bg-card shadow-subtle">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
-          <Link
-            to="/"
-            className="flex shrink-0 items-center gap-2"
-            data-ocid="brand_link"
-          >
-            <Flame className="size-8 text-primary" aria-hidden="true" />
-            <span className="font-display text-base font-semibold tracking-tight text-gradient sm:text-lg">
-              BEFORE WE DIE
-            </span>
-          </Link>
+      return members.map((m) => {
+        let resolvedName = m.user_name;
+        if (m.user_name === me.name || m.user_name.startsWith("Explorer ")) {
+          resolvedName = currentStoredName;
+        }
 
-          <nav
-            className="hidden items-center gap-1 md:flex"
-            data-ocid="nav"
-            aria-label="Primary"
-          >
-            {navItems.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                activeProps={{
-                  className: "bg-accent text-accent-foreground hover:bg-accent",
-                }}
-                data-ocid={`nav_link_${item.label
-                  .toLowerCase()
-                  .replace(/\s+/g, "_")}`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <JournalSwitcher />
-            <button
-              type="button"
-              onClick={clear}
-              className="hidden rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:inline-flex"
-              data-ocid="logout_button"
-            >
-              Sign out
-            </button>
-
-            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden"
-                  aria-label="Open menu"
-                  data-ocid="mobile_menu_button"
-                >
-                  <Menu className="size-5" aria-hidden="true" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-72">
-                <SheetHeader>
-                  <SheetTitle className="font-display text-base tracking-tight text-gradient">
-                    BEFORE WE DIE
-                  </SheetTitle>
-                </SheetHeader>
-                <nav
-                  className="flex flex-col gap-1 px-2"
-                  aria-label="Mobile"
-                  data-ocid="mobile_nav"
-                >
-                  {navItems.map((item) => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      onClick={() => setMenuOpen(false)}
-                      className="rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                      activeProps={{
-                        className:
-                          "bg-accent text-accent-foreground hover:bg-accent",
-                      }}
-                      data-ocid={`mobile_nav_link_${item.label
-                        .toLowerCase()
-                        .replace(/\s+/g, "_")}`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </nav>
-                <div className="mt-auto border-t px-2 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      clear();
-                    }}
-                    className="w-full rounded-md px-3 py-2.5 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                    data-ocid="mobile_logout_button"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 bg-background">
-        <Outlet />
-      </main>
-
-      <footer className="border-t bg-card">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground sm:flex-row">
-          <span>
-            © {new Date().getFullYear()}. Built by NOT SAVAGES
-            
-            .
-          </span>
-          <span className="font-display italic text-muted-foreground">
-            Before we die, we live.
-          </span>
-        </div>
-      </footer>
-    </div>
-  );
-}
+        return {
+          principal: resolvedName as any,
+          joinedAt: BigInt(m.joined_at) * 1_000_000n,
+          role: (m.role || MemberRole.member) as any,
+        };
+      });
+    },
+    enabled: Boolean(journalId),
+  });
 }
 
 export function useGenerateInvitationLink() {
