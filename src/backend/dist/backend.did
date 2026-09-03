@@ -1,0 +1,119 @@
+type Value = 
+ variant {
+   "bool": bool;
+   float: float64;
+   "int": int;
+   "nat": nat;
+   "null";
+   "text": text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type Timestamp = int;
+type Result__1 = 
+ variant {
+   err: Error;
+   ok;
+ };
+type Result = 
+ record {
+   hasMore: bool;
+   rows: vec vec Cell;
+ };
+type MemberRole = 
+ variant {
+   member;
+   owner;
+ };
+type Member = 
+ record {
+   joinedAt: Timestamp;
+   "principal": principal;
+   role: MemberRole;
+ };
+type JournalId = nat;
+type Journal = 
+ record {
+   created: Timestamp;
+   description: text;
+   id: JournalId;
+   members: vec Member;
+   owner: principal;
+   title: text;
+ };
+type ItemId = nat;
+type InvitationLink = 
+ record {
+   code: text;
+   created: Timestamp;
+   journalId: JournalId;
+ };
+type Error = 
+ variant {
+   AmbiguousAttribute: record {
+                         field: text;
+                         sources: vec text;
+                       };
+   FrontendOriginMismatch: record {
+                             expected: vec text;
+                             got: text;
+                           };
+   FrontendOriginsNotConfigured;
+   MalformedCandid;
+   MissingField: text;
+   MixedSsoSources: record {
+                      otherKeys: vec text;
+                      ssoKeys: vec text;
+                    };
+   NoAttributes;
+   Stale: record {ageNs: nat;};
+   UnknownNonce;
+   UntrustedSsoSource: record {domain: text;};
+ };
+type Cell = 
+ record {
+   name: text;
+   value: Value;
+ };
+type BucketListItem = 
+ record {
+   completed: bool;
+   created: Timestamp;
+   id: ItemId;
+   journalId: JournalId;
+   note: text;
+   title: text;
+   vaulted: bool;
+ };
+service : {
+  _initialize_access_control: () -> ();
+  _internet_identity_sign_in_finish: () -> (Result__1);
+  _internet_identity_sign_in_start: () -> (blob);
+  addBucketListItem: (journalId: JournalId, title: text, note: text) ->
+   (BucketListItem);
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  createJournal: (title: text, description: text) -> (Journal);
+  deleteBucketListItem: (itemId: ItemId) -> (bool);
+  editBucketListItem: (itemId: ItemId, title: text, note: text) ->
+   (opt BucketListItem);
+  execute: (qJson: text) -> (Result) query;
+  generateInvitationLink: (journalId: JournalId) -> (InvitationLink);
+  getApiDoc: () -> (text) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getJournal: (journalId: JournalId) -> (opt Journal) query;
+  isCallerAdmin: () -> (bool) query;
+  joinJournal: (invitationCode: text) -> (Journal);
+  listBucketListItems: (journalId: JournalId) -> (vec BucketListItem) query;
+  listMembers: (journalId: JournalId) -> (vec Member) query;
+  listMyJournals: () -> (vec Journal) query;
+  removeMember: (journalId: JournalId, member: principal) -> (Journal);
+  schema: () -> (text) query;
+  setBucketListItemCompleted: (itemId: ItemId, completed: bool) ->
+   (opt BucketListItem);
+  setBucketListItemVaulted: (itemId: ItemId, vaulted: bool) ->
+   (opt BucketListItem);
+}

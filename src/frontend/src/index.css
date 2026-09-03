@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("/assets/fonts/Fraunces.woff2") format("woff2");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "General Sans";
+  src: url("/assets/fonts/GeneralSans.woff2") format("woff2");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/JetBrainsMono.woff2") format("woff2");
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --font-display: "Fraunces", serif;
+    --font-body: "General Sans", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+    --radius: 0.75rem;
+
+    /* Warm paper — the daylight echo of the night theme */
+    --background: 0.97 0.015 70;
+    --foreground: 0.18 0.025 45;
+    --card: 0.99 0.01 70;
+    --card-foreground: 0.18 0.025 45;
+    --popover: 0.99 0.01 70;
+    --popover-foreground: 0.18 0.025 45;
+
+    --primary: 0.5 0.14 45;
+    --primary-foreground: 0.97 0.01 45;
+
+    --secondary: 0.93 0.02 70;
+    --secondary-foreground: 0.28 0.025 45;
+    --muted: 0.93 0.02 70;
+    --muted-foreground: 0.5 0.02 45;
+
+    --accent: 0.55 0.12 22;
+    --accent-foreground: 0.97 0.01 22;
+
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 0.97 0.01 25;
+    --success: 0.5 0.14 150;
+    --warning: 0.6 0.13 85;
+
+    --border: 0.88 0.02 70;
+    --input: 0.88 0.02 70;
+    --ring: 0.5 0.14 45;
+
+    --chart-1: 0.5 0.14 45;
+    --chart-2: 0.55 0.12 22;
+    --chart-3: 0.45 0.11 240;
+    --chart-4: 0.6 0.13 85;
+    --chart-5: 0.5 0.12 165;
+
+    --sidebar: 0.95 0.018 70;
+    --sidebar-foreground: 0.18 0.025 45;
+    --sidebar-primary: 0.5 0.14 45;
+    --sidebar-primary-foreground: 0.97 0.01 45;
+    --sidebar-accent: 0.91 0.02 70;
+    --sidebar-accent-foreground: 0.28 0.025 45;
+    --sidebar-border: 0.88 0.02 70;
+    --sidebar-ring: 0.5 0.14 45;
+
+    /* Cinematic atmosphere */
+    --gradient-primary: linear-gradient(
+      135deg,
+      oklch(0.74 0.16 65),
+      oklch(0.55 0.13 22)
+    );
+    --gradient-subtle: linear-gradient(
+      180deg,
+      oklch(0.165 0.02 50),
+      oklch(0.13 0.018 50)
+    );
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    /* The Last Light — deep warm charcoal, ember amber, dusty rose */
+    --background: 0.13 0.018 50;
+    --foreground: 0.93 0.012 60;
+    --card: 0.165 0.02 50;
+    --card-foreground: 0.93 0.012 60;
+    --popover: 0.17 0.02 50;
+    --popover-foreground: 0.93 0.012 60;
+
+    --primary: 0.74 0.16 65;
+    --primary-foreground: 0.13 0.018 65;
+
+    --secondary: 0.21 0.022 50;
+    --secondary-foreground: 0.84 0.012 60;
+    --muted: 0.21 0.02 50;
+    --muted-foreground: 0.55 0.015 55;
+
+    --accent: 0.63 0.14 22;
+    --accent-foreground: 0.95 0.006 22;
+
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 0.93 0.01 25;
+    --success: 0.6 0.16 150;
+    --warning: 0.72 0.15 85;
+
+    --border: 0.26 0.022 50;
+    --input: 0.26 0.022 50;
+    --ring: 0.74 0.16 65;
+
+    --chart-1: 0.74 0.16 65;
+    --chart-2: 0.63 0.14 22;
+    --chart-3: 0.6 0.11 240;
+    --chart-4: 0.72 0.15 85;
+    --chart-5: 0.6 0.14 165;
+
+    --sidebar: 0.145 0.02 50;
+    --sidebar-foreground: 0.93 0.012 60;
+    --sidebar-primary: 0.74 0.16 65;
+    --sidebar-primary-foreground: 0.13 0.018 65;
+    --sidebar-accent: 0.21 0.022 50;
+    --sidebar-accent-foreground: 0.84 0.012 60;
+    --sidebar-border: 0.26 0.022 50;
+    --sidebar-ring: 0.74 0.16 65;
+
+    --gradient-primary: linear-gradient(
+      135deg,
+      oklch(0.74 0.16 65),
+      oklch(0.55 0.13 22)
+    );
+    --gradient-subtle: linear-gradient(
+      180deg,
+      oklch(0.165 0.02 50),
+      oklch(0.13 0.018 50)
+    );
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+}
+
+@layer utilities {
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-gradient-primary {
+    background-image: var(--gradient-primary);
+  }
+  .bg-gradient-subtle {
+    background-image: var(--gradient-subtle);
+  }
+  .shadow-subtle {
+    box-shadow: 0 1px 2px 0 oklch(0.13 0.02 50 / 0.4), 0 4px 16px -4px
+      oklch(0.13 0.02 50 / 0.35);
+  }
+  .shadow-elevated {
+    box-shadow: 0 2px 4px 0 oklch(0.13 0.02 50 / 0.5), 0 16px 48px -12px
+      oklch(0.13 0.02 50 / 0.55);
+  }
+  .shadow-ember {
+    box-shadow: 0 8px 32px -12px oklch(0.74 0.16 65 / 0.35);
+  }
+}

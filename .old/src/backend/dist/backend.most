@@ -1,0 +1,137 @@
+// Version: 4.0.0
+type AccessControlState__140300680 =
+  {
+    var adminAssigned : Bool;
+    userRoles : Map__386906547<Principal, UserRole__44914475>
+  };
+type BucketListItem__304593891 =
+  {
+    completed : Bool;
+    created : Timestamp__435785293;
+    id : ItemId__97234529;
+    journalId : JournalId__421801893;
+    note : Text;
+    title : Text;
+    vaulted : Bool
+  };
+type BucketListItem__599835738 =
+  {
+    completed : Bool;
+    created : Timestamp__210726600;
+    id : ItemId__388425879;
+    journalId : JournalId__822881032;
+    note : Text;
+    title : Text;
+    vaulted : Bool
+  };
+type Data__265875254<K, V> = {var count : Nat__58649523; kvs : [var ?(K, V)]};
+type Internal__161573640<K, V> =
+  {children : [var ?Node__430031793<K, V>]; data : Data__265875254<K, V>};
+type InvitationLink__720713098 =
+  {
+    code : Text;
+    created : Timestamp__435785293;
+    journalId : JournalId__421801893
+  };
+type InvitationLink__957612227 =
+  {
+    code : Text;
+    created : Timestamp__210726600;
+    journalId : JournalId__822881032
+  };
+type ItemId__388425879 = Nat;
+type ItemId__97234529 = Nat;
+type JournalId__421801893 = Nat;
+type JournalId__822881032 = Nat;
+type Journal__1005536675 =
+  {
+    created : Timestamp__210726600;
+    description : Text;
+    id : JournalId__822881032;
+    members : [Member__310135062];
+    owner : Principal;
+    title : Text
+  };
+type Journal__720838491 =
+  {
+    created : Timestamp__435785293;
+    description : Text;
+    id : JournalId__421801893;
+    members : [Member__712024786];
+    owner : Principal;
+    title : Text
+  };
+type Leaf__1045638083<K, V> = {data : Data__265875254<K, V>};
+type List__1004628775<T> =
+  {
+    var blockIndex : Nat__58649523;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__58649523
+  };
+type List__89170296<T> = List__1004628775<T>;
+type Map__13625999<K, V> =
+  {var root : Node__430031793<K, V>; var size : Nat__58649523};
+type Map__386906547<K, V> = Map__670138087<K, V>;
+type Map__670138087<K, V> = Map__13625999<K, V>;
+type MemberRole__1046704522 = {#member; #owner};
+type MemberRole__207119821 = {#member; #owner};
+type Member__310135062 =
+  {
+    joinedAt : Timestamp__210726600;
+    principal : Principal;
+    role : MemberRole__1046704522
+  };
+type Member__712024786 =
+  {
+    joinedAt : Timestamp__435785293;
+    principal : Principal;
+    role : MemberRole__207119821
+  };
+type Nat__58649523 = Nat__920180692;
+type Nat__920180692 = Nat;
+type NewActor__509629864 =
+  {
+    accessControlState : AccessControlState__140300680;
+    invitations : List__89170296<InvitationLink__957612227>;
+    items : List__89170296<BucketListItem__599835738>;
+    journals : List__89170296<Journal__1005536675>;
+    nextItemId : {var next : ItemId__388425879};
+    nextJournalId : {var next : JournalId__822881032}
+  };
+type Node__430031793<K, V> =
+  {#internal : Internal__161573640<K, V>; #leaf : Leaf__1045638083<K, V>};
+type OldActor__426030763 = {};
+type Timestamp__210726600 = Int;
+type Timestamp__435785293 = Int;
+type UserRole__44914475 = {#admin; #guest; #user};
+type UserRole__91647283 = {#admin; #guest; #user};
+{
+  "20260903_000000" : (_old : OldActor__426030763) -> NewActor__509629864
+}
+actor  {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__386906547<Principal, UserRole__91647283>
+    };
+  stable invitations :
+    {
+      var blockIndex : Nat__58649523;
+      var blocks : [var [var ?InvitationLink__720713098]];
+      var elementIndex : Nat__58649523
+    };
+  stable items :
+    {
+      var blockIndex : Nat__58649523;
+      var blocks : [var [var ?BucketListItem__304593891]];
+      var elementIndex : Nat__58649523
+    };
+  stable journals :
+    {
+      var blockIndex : Nat__58649523;
+      var blocks : [var [var ?Journal__720838491]];
+      var elementIndex : Nat__58649523
+    };
+  stable nextItemId : {var next : ItemId__97234529};
+  stable nextJournalId : {var next : JournalId__421801893}
+};
