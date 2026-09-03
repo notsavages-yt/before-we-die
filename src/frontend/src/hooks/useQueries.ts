@@ -107,9 +107,22 @@ export function useMembers(journalId: JournalId | null) {
 export function useGenerateInvitationLink() {
   return useMutation({
     mutationFn: async (journalId: JournalId): Promise<InvitationLink> => {
+      const journals = getStored<Journal[]>("bwd_journals", []);
+      const targetJournal = journals.find((j) => String(j.id) === String(journalId));
+      
+      // Encode basic journal metadata so it can be restored on another device/browser
+      const payload = {
+        id: String(journalId),
+        title: targetJournal?.title || "Shared Journal",
+        desc: targetJournal?.description || "",
+        t: Date.now(),
+      };
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+      const code = `invite_${encoded}`;
+
       return {
         created: getNowNano(),
-        code: "invite_" + String(journalId) + "_" + Math.random().toString(36).substring(7),
+        code,
         journalId,
       };
     },
@@ -121,11 +134,60 @@ export function useJoinJournal() {
   return useMutation({
     mutationFn: async (invitationCode: string): Promise<Journal> => {
       const journals = getStored<Journal[]>("bwd_journals", []);
-      if (journals.length > 0) return journals[0];
-      throw new Error("Invalid invitation code: " + invitationCode);
+      let targetJournalId: string | null = null;
+      let fallbackTitle = "Shared Journal";
+      let fallbackDesc = "";
+
+      if (invitationCode.startsWith("invite_")) {
+        const rawPayload = invitationCode.replace("invite_", "");
+        try {
+          // If it's a base64 encoded journal payload
+          const parsed = JSON.parse(decodeURIComponent(escape(atob(rawPayload))));
+          targetJournalId = parsed.id;
+          fallbackTitle = parsed.title;
+          fallbackDesc = parsed.desc;
+        } catch {
+          // Legacy format: invite_<journalId>_<random>
+          const parts = invitationCode.split("_");
+          if (parts[1]) targetJournalId = parts[1];
+        }
+      }
+
+      let journal = journals.find((j) => String(j.id) === String(targetJournalId));
+
+      // If opening on a new browser/device where the journal does not exist yet:
+      if (!journal) {
+        const now = getNowNano();
+        journal = {
+          id: targetJournalId ? BigInt(targetJournalId) : now,
+          title: fallbackTitle,
+          description: fallbackDesc,
+          created: now,
+          owner: "creator" as any,
+          members: [],
+        };
+        journals.push(journal);
+      }
+
+      // Add guest/member to the journal members list
+      const memberId = "guest_" + Math.random().toString(36).substring(7);
+      if (!journal.members) journal.members = [];
+      
+      const alreadyMember = journal.members.some((m) => String(m.principal) === memberId);
+      if (!alreadyMember) {
+        journal.members.push({
+          principal: memberId as any,
+          joinedAt: getNowNano(),
+          role: MemberRole.member as any,
+        });
+      }
+
+      setStored("bwd_journals", journals);
+      return journal;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["journals"] });
+      void queryClient.invalidateQueries({ queryKey: ["members"] });
     },
   });
 }
