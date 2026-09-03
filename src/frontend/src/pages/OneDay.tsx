@@ -155,7 +155,7 @@ export function OneDay() {
             type="button"
             onClick={prev}
             aria-label="Previous slide"
-            className="flex size-12 items-center justify-center rounded-full border border-border bg-card/60 text-foreground backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex size-12 items-center justify-center rounded-full border border-[#e8e2d8] bg-[#fdfbf7] text-foreground shadow-sm transition-colors hover:bg-[#f5f0e6] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             data-ocid="slideshow_prev"
           >
             <ChevronLeft className="size-6" aria-hidden="true" />
@@ -165,7 +165,7 @@ export function OneDay() {
             type="button"
             onClick={() => setPlaying((p) => !p)}
             aria-label={playing ? "Pause slideshow" : "Play slideshow"}
-            className="flex size-12 items-center justify-center rounded-full border border-border bg-card/60 text-foreground backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex size-12 items-center justify-center rounded-full border border-[#e8e2d8] bg-[#fdfbf7] text-foreground shadow-sm transition-colors hover:bg-[#f5f0e6] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             data-ocid="slideshow_play_pause"
           >
             {playing ? (
@@ -179,7 +179,7 @@ export function OneDay() {
             type="button"
             onClick={next}
             aria-label="Next slide"
-            className="flex size-12 items-center justify-center rounded-full border border-border bg-card/60 text-foreground backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex size-12 items-center justify-center rounded-full border border-[#e8e2d8] bg-[#fdfbf7] text-foreground shadow-sm transition-colors hover:bg-[#f5f0e6] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             data-ocid="slideshow_next"
           >
             <ChevronRight className="size-6" aria-hidden="true" />
