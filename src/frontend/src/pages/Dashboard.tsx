@@ -595,7 +595,7 @@ export function Dashboard() {
 
       {/* Journals grid */}
       <motion.section
-        {motionProps}
+        {...motionProps}
         className="mb-12"
         data-ocid="journals_section"
       >
