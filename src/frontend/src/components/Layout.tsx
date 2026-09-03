@@ -146,7 +146,7 @@ export function Layout() {
           <span>
             © {new Date().getFullYear()}. Built by {"  "}
             <a
-              href={`https://www.youtube.com/@notsavages${encodeURIComponent(
+              href={`https://www.youtube.com/@notsavages=${encodeURIComponent(
                 window.location.hostname,
               )}`}
               target="_blank"
