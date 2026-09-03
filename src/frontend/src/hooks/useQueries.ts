@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import type { BucketListItem, InvitationLink, Journal, JournalId, Member } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -6,39 +7,40 @@ const MemberRole = {
   owner: "owner",
 } as const;
 
-// Motoko nanosecond timestamp helper without raw BigInt literal
-const getNowNano = (): bigint => {
-  return BigInt(Date.now()) * BigInt(1000000);
-};
+function getMyIdentity(): { id: string; name: string } {
+  let id = localStorage.getItem("bwd_user_id");
+  let name = localStorage.getItem("bwd_user_name");
 
-// Safe JSON serialization for BigInt
-const getStored = <T>(key: string, fallback: T): T => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw, (_, value) => {
-      if (typeof value === "string" && /^\d+n$/.test(value)) {
-        return BigInt(value.slice(0, -1));
-      }
-      return value;
-    });
-  } catch {
-    return fallback;
+  if (!id) {
+    id = "user_" + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem("bwd_user_id", id);
   }
-};
-
-const setStored = <T>(key: string, value: T): void => {
-  const serialized = JSON.stringify(value, (_, v) =>
-    typeof v === "bigint" ? v.toString() + "n" : v
-  );
-  localStorage.setItem(key, serialized);
-};
+  if (!name) {
+    name = "Explorer " + id.substring(5, 8).toUpperCase();
+    localStorage.setItem("bwd_user_name", name);
+  }
+  return { id, name };
+}
 
 export function useJournals() {
   return useQuery({
     queryKey: ["journals"],
     queryFn: async (): Promise<Journal[]> => {
-      return getStored<Journal[]>("bwd_journals", []);
+      const { data, error } = await supabase
+        .from("journals")
+        .select("*")
+        .order("created", { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((j) => ({
+        id: BigInt(j.id),
+        title: j.title,
+        description: j.description || "",
+        created: BigInt(j.created),
+        owner: j.owner as any,
+        members: [],
+      }));
     },
   });
 }
@@ -53,25 +55,41 @@ export function useCreateJournal() {
       title: string;
       description: string;
     }): Promise<Journal> => {
-      const journals = getStored<Journal[]>("bwd_journals", []);
-      const now = getNowNano();
-      const newJournal: Journal = {
-        id: now,
+      const id = String(Date.now());
+      const now = Date.now();
+      const me = getMyIdentity();
+
+      const { error: jError } = await supabase.from("journals").insert({
+        id,
+        title,
+        description: description || "",
+        created: now,
+        owner: me.name,
+      });
+      if (jError) throw jError;
+
+      const { error: mError } = await supabase.from("members").insert({
+        journal_id: id,
+        user_name: me.name,
+        role: MemberRole.owner,
+        joined_at: now,
+      });
+      if (mError) throw mError;
+
+      return {
+        id: BigInt(id),
         title,
         description,
-        created: now,
-        owner: "self" as any,
+        created: BigInt(now),
+        owner: me.name as any,
         members: [
           {
-            principal: "self" as any,
-            joinedAt: now,
+            principal: me.name as any,
+            joinedAt: BigInt(now),
             role: MemberRole.owner as any,
           },
         ],
       };
-      journals.push(newJournal);
-      setStored("bwd_journals", journals);
-      return newJournal;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["journals"] });
@@ -83,11 +101,26 @@ export function useJournal(journalId: JournalId | null) {
   return useQuery({
     queryKey: ["journal", journalId ? String(journalId) : null],
     queryFn: async (): Promise<Journal | null> => {
-      if (journalId === null || journalId === undefined) return null;
-      const journals = getStored<Journal[]>("bwd_journals", []);
-      return journals.find((j) => String(j.id) === String(journalId)) || null;
+      if (!journalId) return null;
+
+      const { data, error } = await supabase
+        .from("journals")
+        .select("*")
+        .eq("id", String(journalId))
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      return {
+        id: BigInt(data.id),
+        title: data.title,
+        description: data.description || "",
+        created: BigInt(data.created),
+        owner: data.owner as any,
+        members: [],
+      };
     },
-    enabled: journalId !== null && journalId !== undefined,
+    enabled: Boolean(journalId),
   });
 }
 
@@ -95,34 +128,32 @@ export function useMembers(journalId: JournalId | null) {
   return useQuery({
     queryKey: ["members", journalId ? String(journalId) : null],
     queryFn: async (): Promise<Member[]> => {
-      if (journalId === null || journalId === undefined) return [];
-      const journals = getStored<Journal[]>("bwd_journals", []);
-      const journal = journals.find((j) => String(j.id) === String(journalId));
-      return journal?.members || [];
+      if (!journalId) return [];
+
+      const { data, error } = await supabase
+        .from("members")
+        .select("*")
+        .eq("journal_id", String(journalId))
+        .order("joined_at", { ascending: true });
+
+      if (error) return [];
+
+      return (data || []).map((m) => ({
+        principal: m.user_name as any,
+        joinedAt: BigInt(m.joined_at),
+        role: (m.role || MemberRole.member) as any,
+      }));
     },
-    enabled: journalId !== null && journalId !== undefined,
+    enabled: Boolean(journalId),
   });
 }
 
 export function useGenerateInvitationLink() {
   return useMutation({
     mutationFn: async (journalId: JournalId): Promise<InvitationLink> => {
-      const journals = getStored<Journal[]>("bwd_journals", []);
-      const targetJournal = journals.find((j) => String(j.id) === String(journalId));
-      
-      // Encode basic journal metadata so it can be restored on another device/browser
-      const payload = {
-        id: String(journalId),
-        title: targetJournal?.title || "Shared Journal",
-        desc: targetJournal?.description || "",
-        t: Date.now(),
-      };
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-      const code = `invite_${encoded}`;
-
       return {
-        created: getNowNano(),
-        code,
+        created: BigInt(Date.now()),
+        code: `invite_${String(journalId)}`,
         journalId,
       };
     },
@@ -133,57 +164,48 @@ export function useJoinJournal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (invitationCode: string): Promise<Journal> => {
-      const journals = getStored<Journal[]>("bwd_journals", []);
-      let targetJournalId: string | null = null;
-      let fallbackTitle = "Shared Journal";
-      let fallbackDesc = "";
+      let journalId = invitationCode.replace("invite_", "");
 
-      if (invitationCode.startsWith("invite_")) {
-        const rawPayload = invitationCode.replace("invite_", "");
-        try {
-          // If it's a base64 encoded journal payload
-          const parsed = JSON.parse(decodeURIComponent(escape(atob(rawPayload))));
-          targetJournalId = parsed.id;
-          fallbackTitle = parsed.title;
-          fallbackDesc = parsed.desc;
-        } catch {
-          // Legacy format: invite_<journalId>_<random>
-          const parts = invitationCode.split("_");
-          if (parts[1]) targetJournalId = parts[1];
+      try {
+        if (journalId.startsWith("eyJ")) {
+          const parsed = JSON.parse(decodeURIComponent(escape(atob(journalId))));
+          if (parsed.id) journalId = parsed.id;
         }
-      }
+      } catch {}
 
-      let journal = journals.find((j) => String(j.id) === String(targetJournalId));
+      const { data: journal, error: jError } = await supabase
+        .from("journals")
+        .select("*")
+        .eq("id", journalId)
+        .single();
 
-      // If opening on a new browser/device where the journal does not exist yet:
-      if (!journal) {
-        const now = getNowNano();
-        journal = {
-          id: targetJournalId ? BigInt(targetJournalId) : now,
-          title: fallbackTitle,
-          description: fallbackDesc,
-          created: now,
-          owner: "creator" as any,
-          members: [],
-        };
-        journals.push(journal);
-      }
+      if (jError || !journal) throw new Error("Journal not found.");
 
-      // Add guest/member to the journal members list
-      const memberId = "guest_" + Math.random().toString(36).substring(7);
-      if (!journal.members) journal.members = [];
-      
-      const alreadyMember = journal.members.some((m) => String(m.principal) === memberId);
-      if (!alreadyMember) {
-        journal.members.push({
-          principal: memberId as any,
-          joinedAt: getNowNano(),
-          role: MemberRole.member as any,
+      const me = getMyIdentity();
+
+      const { data: existing } = await supabase
+        .from("members")
+        .select("id")
+        .eq("journal_id", journalId)
+        .eq("user_name", me.name);
+
+      if (!existing || existing.length === 0) {
+        await supabase.from("members").insert({
+          journal_id: journalId,
+          user_name: me.name,
+          role: MemberRole.member,
+          joined_at: Date.now(),
         });
       }
 
-      setStored("bwd_journals", journals);
-      return journal;
+      return {
+        id: BigInt(journal.id),
+        title: journal.title,
+        description: journal.description || "",
+        created: BigInt(journal.created),
+        owner: journal.owner as any,
+        members: [],
+      };
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["journals"] });
@@ -195,12 +217,24 @@ export function useJoinJournal() {
 export function useRemoveMember() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ journalId }: { journalId: JournalId; member: any }) => {
+    mutationFn: async ({
+      journalId,
+      member,
+    }: {
+      journalId: JournalId;
+      member: any;
+    }) => {
+      const { error } = await supabase
+        .from("members")
+        .delete()
+        .eq("journal_id", String(journalId))
+        .eq("user_name", String(member));
+
+      if (error) throw error;
       return { id: journalId } as Journal;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["members"] });
-      void queryClient.invalidateQueries({ queryKey: ["journals"] });
     },
   });
 }
@@ -209,11 +243,27 @@ export function useBucketListItems(journalId: JournalId | null) {
   return useQuery({
     queryKey: ["bucketListItems", journalId ? String(journalId) : null],
     queryFn: async (): Promise<BucketListItem[]> => {
-      if (journalId === null || journalId === undefined) return [];
-      const allItems = getStored<BucketListItem[]>("bwd_items", []);
-      return allItems.filter((i) => String(i.journalId) === String(journalId));
+      if (!journalId) return [];
+
+      const { data, error } = await supabase
+        .from("bucket_items")
+        .select("*")
+        .eq("journal_id", String(journalId))
+        .order("created", { ascending: true });
+
+      if (error) return [];
+
+      return (data || []).map((i) => ({
+        id: BigInt(i.id),
+        journalId: BigInt(i.journal_id),
+        title: i.title,
+        note: i.note || "",
+        completed: Boolean(i.completed),
+        vaulted: Boolean(i.vaulted),
+        created: BigInt(i.created),
+      }));
     },
-    enabled: journalId !== null && journalId !== undefined,
+    enabled: Boolean(journalId),
   });
 }
 
@@ -229,20 +279,30 @@ export function useAddBucketListItem() {
       title: string;
       note: string;
     }): Promise<BucketListItem> => {
-      const items = getStored<BucketListItem[]>("bwd_items", []);
-      const now = getNowNano();
-      const newItem: BucketListItem = {
-        id: now,
-        journalId: BigInt(String(journalId)),
+      const id = String(Date.now());
+      const now = Date.now();
+
+      const { error } = await supabase.from("bucket_items").insert({
+        id,
+        journal_id: String(journalId),
         title,
         note: note || "",
         completed: false,
         vaulted: false,
         created: now,
+      });
+
+      if (error) throw error;
+
+      return {
+        id: BigInt(id),
+        journalId: BigInt(String(journalId)),
+        title,
+        note: note || "",
+        completed: false,
+        vaulted: false,
+        created: BigInt(now),
       };
-      items.push(newItem);
-      setStored("bwd_items", items);
-      return newItem;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["bucketListItems"] });
@@ -262,14 +322,12 @@ export function useEditBucketListItem() {
       title: string;
       note: string;
     }): Promise<BucketListItem | null> => {
-      const items = getStored<BucketListItem[]>("bwd_items", []);
-      const item = items.find((i) => String(i.id) === String(itemId));
-      if (item) {
-        item.title = title;
-        item.note = note;
-        setStored("bwd_items", items);
-        return item;
-      }
+      const { error } = await supabase
+        .from("bucket_items")
+        .update({ title, note })
+        .eq("id", String(itemId));
+
+      if (error) throw error;
       return null;
     },
     onSuccess: () => {
@@ -288,13 +346,12 @@ export function useSetBucketListItemCompleted() {
       itemId: bigint;
       completed: boolean;
     }): Promise<BucketListItem | null> => {
-      const items = getStored<BucketListItem[]>("bwd_items", []);
-      const item = items.find((i) => String(i.id) === String(itemId));
-      if (item) {
-        item.completed = completed;
-        setStored("bwd_items", items);
-        return item;
-      }
+      const { error } = await supabase
+        .from("bucket_items")
+        .update({ completed })
+        .eq("id", String(itemId));
+
+      if (error) throw error;
       return null;
     },
     onSuccess: () => {
@@ -313,13 +370,12 @@ export function useSetBucketListItemVaulted() {
       itemId: bigint;
       vaulted: boolean;
     }): Promise<BucketListItem | null> => {
-      const items = getStored<BucketListItem[]>("bwd_items", []);
-      const item = items.find((i) => String(i.id) === String(itemId));
-      if (item) {
-        item.vaulted = vaulted;
-        setStored("bwd_items", items);
-        return item;
-      }
+      const { error } = await supabase
+        .from("bucket_items")
+        .update({ vaulted })
+        .eq("id", String(itemId));
+
+      if (error) throw error;
       return null;
     },
     onSuccess: () => {
@@ -332,9 +388,12 @@ export function useDeleteBucketListItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (itemId: bigint): Promise<boolean> => {
-      let items = getStored<BucketListItem[]>("bwd_items", []);
-      items = items.filter((i) => String(i.id) !== String(itemId));
-      setStored("bwd_items", items);
+      const { error } = await supabase
+        .from("bucket_items")
+        .delete()
+        .eq("id", String(itemId));
+
+      if (error) throw error;
       return true;
     },
     onSuccess: () => {
