@@ -260,7 +260,7 @@ export function useBucketListItems(journalId: JournalId | null) {
         note: i.note || "",
         completed: Boolean(i.completed),
         vaulted: Boolean(i.vaulted),
-        created: BigInt(i.created),
+        created: BigInt(i.created) * 1_000_000n,
       }));
     },
     enabled: Boolean(journalId),
