@@ -7,7 +7,15 @@ const MemberRole = {
   owner: "owner",
 } as const;
 
-function getMyIdentity(): { id: string; name: string } {
+export interface UserProfile {
+  id: string;
+  displayName: string;
+  avatarUrl: string;
+  dob: string;
+  bio: string;
+}
+
+export function getMyIdentity(): { id: string; name: string } {
   let id = localStorage.getItem("bwd_user_id");
   let name = localStorage.getItem("bwd_user_name");
 
@@ -21,6 +29,77 @@ function getMyIdentity(): { id: string; name: string } {
   }
   return { id, name };
 }
+
+// ----------------- PROFILES -----------------
+
+export function useMyProfile() {
+  const me = getMyIdentity();
+  return useQuery({
+    queryKey: ["myProfile", me.id],
+    queryFn: async (): Promise<UserProfile> => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", me.id)
+        .maybeSingle();
+
+      if (error || !data) {
+        return {
+          id: me.id,
+          displayName: me.name,
+          avatarUrl: "",
+          dob: "",
+          bio: "",
+        };
+      }
+
+      return {
+        id: data.id,
+        displayName: data.display_name || me.name,
+        avatarUrl: data.avatar_url || "",
+        dob: data.dob || "",
+        bio: data.bio || "",
+      };
+    },
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (profile: Partial<UserProfile>): Promise<void> => {
+      const me = getMyIdentity();
+      const newName = profile.displayName || me.name;
+      localStorage.setItem("bwd_user_name", newName);
+
+      const payload: Record<string, any> = {
+        id: me.id,
+        updated_at: Date.now(),
+      };
+      if (profile.displayName !== undefined) payload.display_name = profile.displayName;
+      if (profile.avatarUrl !== undefined) payload.avatar_url = profile.avatarUrl;
+      if (profile.dob !== undefined) payload.dob = profile.dob;
+      if (profile.bio !== undefined) payload.bio = profile.bio;
+
+      const { error } = await supabase.from("profiles").upsert(payload);
+      if (error) throw error;
+
+      // Update name in members table so collaborative members see it
+      if (profile.displayName) {
+        await supabase
+          .from("members")
+          .update({ user_name: profile.displayName })
+          .eq("id_str", me.id);
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["myProfile"] });
+      void queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+  });
+}
+
+// ----------------- JOURNALS -----------------
 
 export function useJournals() {
   return useQuery({
@@ -37,7 +116,7 @@ export function useJournals() {
         id: BigInt(j.id),
         title: j.title,
         description: j.description || "",
-        created: BigInt(j.created),
+        created: BigInt(j.created) * 1_000_000n,
         owner: j.owner as any,
         members: [],
       }));
@@ -80,12 +159,12 @@ export function useCreateJournal() {
         id: BigInt(id),
         title,
         description,
-        created: BigInt(now),
+        created: BigInt(now) * 1_000_000n,
         owner: me.name as any,
         members: [
           {
             principal: me.name as any,
-            joinedAt: BigInt(now),
+            joinedAt: BigInt(now) * 1_000_000n,
             role: MemberRole.owner as any,
           },
         ],
@@ -115,7 +194,7 @@ export function useJournal(journalId: JournalId | null) {
         id: BigInt(data.id),
         title: data.title,
         description: data.description || "",
-        created: BigInt(data.created),
+        created: BigInt(data.created) * 1_000_000n,
         owner: data.owner as any,
         members: [],
       };
@@ -123,6 +202,8 @@ export function useJournal(journalId: JournalId | null) {
     enabled: Boolean(journalId),
   });
 }
+
+// ----------------- MEMBERS -----------------
 
 export function useMembers(journalId: JournalId | null) {
   return useQuery({
@@ -140,7 +221,7 @@ export function useMembers(journalId: JournalId | null) {
 
       return (data || []).map((m) => ({
         principal: m.user_name as any,
-        joinedAt: BigInt(m.joined_at),
+        joinedAt: BigInt(m.joined_at) * 1_000_000n,
         role: (m.role || MemberRole.member) as any,
       }));
     },
@@ -152,7 +233,7 @@ export function useGenerateInvitationLink() {
   return useMutation({
     mutationFn: async (journalId: JournalId): Promise<InvitationLink> => {
       return {
-        created: BigInt(Date.now()),
+        created: BigInt(Date.now()) * 1_000_000n,
         code: `invite_${String(journalId)}`,
         journalId,
       };
@@ -202,7 +283,7 @@ export function useJoinJournal() {
         id: BigInt(journal.id),
         title: journal.title,
         description: journal.description || "",
-        created: BigInt(journal.created),
+        created: BigInt(journal.created) * 1_000_000n,
         owner: journal.owner as any,
         members: [],
       };
@@ -238,6 +319,8 @@ export function useRemoveMember() {
     },
   });
 }
+
+// ----------------- BUCKET ITEMS -----------------
 
 export function useBucketListItems(journalId: JournalId | null) {
   return useQuery({
@@ -301,7 +384,7 @@ export function useAddBucketListItem() {
         note: note || "",
         completed: false,
         vaulted: false,
-        created: BigInt(now),
+        created: BigInt(now) * 1_000_000n,
       };
     },
     onSuccess: () => {
