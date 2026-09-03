@@ -2,7 +2,6 @@ import type { BucketListItem, InvitationLink, Journal, JournalId, Member } from 
 import { MemberRole } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-// Helper utilities for local persistence
 const getStored = <T>(key: string, fallback: T): T => {
   try {
     const item = localStorage.getItem(key);
