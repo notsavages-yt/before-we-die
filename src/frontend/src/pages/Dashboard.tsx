@@ -50,15 +50,21 @@ import { motion } from "motion/react";
 import { useState } from "react";
 
 /* ------------------------------------------------------------------ */
-/* Small presentational helpers                                        */
+/* Small presentational helpers                                       */
 /* ------------------------------------------------------------------ */
 
-function timestampToDate(timestamp: bigint): Date | null {
-  const date = new Date(Number(timestamp / 1_000_000n));
-  return Number.isNaN(date.getTime()) ? null : date;
+function timestampToDate(timestamp: any): Date | null {
+  try {
+    if (!timestamp) return null;
+    const cleanBigInt = BigInt(String(timestamp).replace(/n$/, ""));
+    const date = new Date(Number(cleanBigInt / BigInt(1000000)));
+    return Number.isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
+  }
 }
 
-function formatCreated(timestamp: bigint): string {
+function formatCreated(timestamp: any): string {
   const date = timestampToDate(timestamp);
   if (!date) return "—";
   return date.toLocaleDateString(undefined, {
@@ -74,8 +80,9 @@ function daysLeftInYear(): number {
   return Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 86_400_000));
 }
 
-function journalProgress(items: BucketListItem[], journalId: bigint) {
-  const journalItems = items.filter((i) => i.journalId === journalId);
+function journalProgress(items: BucketListItem[], journalId: any) {
+  const targetId = String(journalId);
+  const journalItems = items.filter((i) => String(i.journalId) === targetId);
   const completed = journalItems.filter((i) => i.completed).length;
   const total = journalItems.length;
   const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
@@ -83,7 +90,7 @@ function journalProgress(items: BucketListItem[], journalId: bigint) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Create journal dialog                                               */
+/* Create journal dialog                                              */
 /* ------------------------------------------------------------------ */
 
 function CreateJournalDialog({
@@ -207,7 +214,7 @@ function CreateJournalDialog({
 }
 
 /* ------------------------------------------------------------------ */
-/* Add / edit item dialog                                              */
+/* Add / edit item dialog                                             */
 /* ------------------------------------------------------------------ */
 
 function ItemDialog({
@@ -218,7 +225,7 @@ function ItemDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  journalId: bigint | null;
+  journalId: any;
   item: BucketListItem | null;
 }) {
   const addItem = useAddBucketListItem();
@@ -246,7 +253,7 @@ function ItemDialog({
           title: capturedTitle,
           note: capturedNote,
         });
-      } else if (journalId !== null) {
+      } else if (journalId !== null && journalId !== undefined) {
         await addItem.mutateAsync({
           journalId,
           title: capturedTitle,
@@ -340,7 +347,7 @@ function ItemDialog({
 }
 
 /* ------------------------------------------------------------------ */
-/* Journal card                                                        */
+/* Journal card                                                       */
 /* ------------------------------------------------------------------ */
 
 function JournalCard({
@@ -354,7 +361,7 @@ function JournalCard({
 }) {
   const { data: items = [] } = useBucketListItems(journal.id);
   const { completed, total, pct } = journalProgress(items, journal.id);
-  const memberCount = journal.members.length + 1; // owner + members
+  const memberCount = (journal.members?.length || 0) + 1;
 
   return (
     <motion.button
@@ -367,7 +374,7 @@ function JournalCard({
           ? "border-primary/60 bg-card shadow-ember"
           : "border-border bg-card hover:border-primary/40"
       }`}
-      data-ocid={`journal_card_${journal.id.toString()}`}
+      data-ocid={`journal_card_${String(journal.id)}`}
       aria-pressed={active}
     >
       <div className="flex items-start justify-between gap-3">
@@ -410,7 +417,7 @@ function JournalCard({
 }
 
 /* ------------------------------------------------------------------ */
-/* Bucket-list item row                                                */
+/* Bucket-list item row                                               */
 /* ------------------------------------------------------------------ */
 
 function ItemRow({
@@ -444,14 +451,14 @@ function ItemRow({
       className={`flex items-start gap-3 rounded-xl border p-4 shadow-subtle transition-colors ${
         item.completed ? "border-accent/40 bg-card/60" : "border-border bg-card"
       }`}
-      data-ocid={`item_row_${item.id.toString()}`}
+      data-ocid={`item_row_${String(item.id)}`}
     >
       <Checkbox
         checked={item.completed}
         onCheckedChange={toggleCompleted}
         disabled={setCompleted.isPending}
         aria-label={`Mark "${item.title}" as ${item.completed ? "pending" : "completed"}`}
-        data-ocid={`item_checkbox_${item.id.toString()}`}
+        data-ocid={`item_checkbox_${String(item.id)}`}
         className="mt-0.5"
       />
 
@@ -495,7 +502,7 @@ function ItemRow({
             variant="ghost"
             size="icon"
             aria-label={`Actions for "${item.title}"`}
-            data-ocid={`item_menu_${item.id.toString()}`}
+            data-ocid={`item_menu_${String(item.id)}`}
           >
             <MoreHorizontal className="size-4" aria-hidden="true" />
           </Button>
@@ -529,7 +536,7 @@ function ItemRow({
 }
 
 /* ------------------------------------------------------------------ */
-/* Dashboard page                                                      */
+/* Dashboard page                                                     */
 /* ------------------------------------------------------------------ */
 
 export function Dashboard() {
@@ -588,7 +595,7 @@ export function Dashboard() {
 
       {/* Journals grid */}
       <motion.section
-        {...motionProps}
+        {motionProps}
         className="mb-12"
         data-ocid="journals_section"
       >
@@ -643,9 +650,9 @@ export function Dashboard() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {journals.map((journal) => (
               <JournalCard
-                key={journal.id.toString()}
+                key={String(journal.id)}
                 journal={journal}
-                active={activeJournalId === journal.id}
+                active={String(activeJournalId) === String(journal.id)}
                 onSelect={() => setActiveJournalId(journal.id)}
               />
             ))}
@@ -705,7 +712,7 @@ export function Dashboard() {
             <ul className="grid gap-3">
               {activeItems.map((item) => (
                 <ItemRow
-                  key={item.id.toString()}
+                  key={String(item.id)}
                   item={item}
                   onEdit={() => openEditItem(item)}
                 />
@@ -734,7 +741,7 @@ export function Dashboard() {
 
       <CreateJournalDialog open={createOpen} onOpenChange={setCreateOpen} />
       <ItemDialog
-        key={editingItem ? editingItem.id.toString() : "new"}
+        key={editingItem ? String(editingItem.id) : "new"}
         open={itemDialogOpen}
         onOpenChange={setItemDialogOpen}
         journalId={activeJournalId}
