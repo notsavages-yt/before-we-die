@@ -1,18 +1,32 @@
 import type { BucketListItem, InvitationLink, Journal, JournalId, Member } from "@/types";
-import { MemberRole } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+const MemberRole = {
+  member: "member",
+  owner: "owner",
+} as const;
+
+// Serializers to safely handle BigInt in localStorage
 const getStored = <T>(key: string, fallback: T): T => {
   try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw, (_, value) => {
+      if (typeof value === "string" && /^\d+n$/.test(value)) {
+        return BigInt(value.slice(0, -1));
+      }
+      return value;
+    });
   } catch {
     return fallback;
   }
 };
 
 const setStored = <T>(key: string, value: T): void => {
-  localStorage.setItem(key, JSON.stringify(value));
+  const serialized = JSON.stringify(value, (_, v) =>
+    typeof v === "bigint" ? `${v.toString()}n` : v
+  );
+  localStorage.setItem(key, serialized);
 };
 
 export function useJournals() {
@@ -35,17 +49,18 @@ export function useCreateJournal() {
       description: string;
     }): Promise<Journal> => {
       const journals = getStored<Journal[]>("bwd_journals", []);
+      const now = BigInt(Date.now());
       const newJournal: Journal = {
-        id: BigInt(Date.now()),
+        id: now,
         title,
         description,
-        created: BigInt(Date.now()),
+        created: now,
         owner: "self" as any,
         members: [
           {
             principal: "self" as any,
-            joinedAt: BigInt(Date.now()),
-            role: MemberRole.owner,
+            joinedAt: now,
+            role: MemberRole.owner as any,
           },
         ],
       };
@@ -102,7 +117,7 @@ export function useJoinJournal() {
     mutationFn: async (invitationCode: string): Promise<Journal> => {
       const journals = getStored<Journal[]>("bwd_journals", []);
       if (journals.length > 0) return journals[0];
-      throw new Error("Invalid invitation code");
+      throw new Error("Invalid invitation code: " + invitationCode);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["journals"] });
@@ -114,7 +129,7 @@ export function useRemoveMember() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ journalId }: { journalId: JournalId; member: any }) => {
-      return {} as Journal;
+      return { id: journalId } as Journal;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["members"] });
