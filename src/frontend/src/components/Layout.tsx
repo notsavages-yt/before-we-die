@@ -144,16 +144,16 @@ export function Layout() {
       <footer className="border-t bg-card">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground sm:flex-row">
           <span>
-            © {new Date().getFullYear()}. Built with love using{" "}
+            © {new Date().getFullYear()}. Built by {"  "}
             <a
-              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(
+              href={`https://www.youtube.com/@notsavages${encodeURIComponent(
                 window.location.hostname,
               )}`}
               target="_blank"
               rel="noreferrer"
               className="text-foreground underline-offset-4 hover:underline"
             >
-              caffeine.ai
+              NOT SAVAGES
             </a>
             .
           </span>
