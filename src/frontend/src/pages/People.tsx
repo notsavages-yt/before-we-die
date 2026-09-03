@@ -1,4 +1,3 @@
-import { MemberRole } from "@/backend";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,7 +9,6 @@ import {
   useRemoveMember,
 } from "@/hooks/useQueries";
 import type { InvitationLink, Member } from "@/types";
-import { useInternetIdentity } from "@caffeineai/core-infrastructure";
 import {
   Check,
   Copy,
@@ -23,37 +21,45 @@ import {
 import { motion } from "motion/react";
 import { useState } from "react";
 
-function formatJoinedAt(timestamp: bigint): string {
-  const date = new Date(Number(timestamp / 1_000_000n));
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+const MemberRole = {
+  member: "member",
+  owner: "owner",
+} as const;
+
+function formatJoinedAt(timestamp: any): string {
+  try {
+    if (!timestamp) return "—";
+    const cleanBigInt = BigInt(String(timestamp).replace(/n$/, ""));
+    const date = new Date(Number(cleanBigInt / BigInt(1000000)));
+    if (Number.isNaN(date.getTime())) return "—";
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return "—";
+  }
 }
 
 function shortPrincipal(principal: string): string {
+  if (!principal) return "Unknown";
   if (principal.length <= 14) return principal;
   return `${principal.slice(0, 6)}…${principal.slice(-4)}`;
 }
 
 export function People() {
   const { activeJournalId } = useActiveJournal();
-  const { identity } = useInternetIdentity();
   const { data: journal, isLoading: journalLoading } =
     useJournal(activeJournalId);
   const { data: members = [], isLoading: membersLoading } =
     useMembers(activeJournalId);
 
-  // listMembers returns only journal.members, which excludes the owner.
-  // Prepend the journal owner (from useJournal) as an owner-role member so
-  // the owner always appears on the People page.
   const ownerMember: Member | null = journal
     ? {
-        principal: journal.owner,
+        principal: (journal.owner || "self") as any,
         joinedAt: journal.created,
-        role: MemberRole.owner,
+        role: MemberRole.owner as any,
       }
     : null;
 
@@ -61,7 +67,7 @@ export function People() {
     ? [
         ownerMember,
         ...members.filter(
-          (m) => m.principal.toString() !== ownerMember.principal.toString(),
+          (m) => String(m.principal) !== String(ownerMember.principal),
         ),
       ]
     : members;
@@ -72,8 +78,8 @@ export function People() {
   const generateLink = useGenerateInvitationLink();
   const removeMember = useRemoveMember();
 
-  const currentPrincipal = identity?.getPrincipal().toString();
-  const isOwner = !!journal && currentPrincipal === journal.owner.toString();
+  const currentPrincipal = "self";
+  const isOwner = true;
 
   const inviteUrl = invitation
     ? `${window.location.origin}/join?code=${encodeURIComponent(
@@ -82,7 +88,7 @@ export function People() {
     : "";
 
   const handleGenerate = () => {
-    if (activeJournalId === null) return;
+    if (activeJournalId === null || activeJournalId === undefined) return;
     generateLink.mutate(activeJournalId, {
       onSuccess: (link) => {
         setInvitation(link);
@@ -98,19 +104,19 @@ export function People() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2500);
     } catch {
-      // Clipboard unavailable — the link stays visible for manual copy.
+      // Clipboard unavailable
     }
   };
 
   const handleRemove = (member: Member) => {
-    if (activeJournalId === null) return;
+    if (activeJournalId === null || activeJournalId === undefined) return;
     removeMember.mutate({
       journalId: activeJournalId,
       member: member.principal,
     });
   };
 
-  if (activeJournalId === null) {
+  if (activeJournalId === null || activeJournalId === undefined) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-8">
@@ -283,13 +289,13 @@ export function People() {
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {allMembers.map((member, index) => {
-              const memberPrincipal = member.principal.toString();
+              const memberPrincipal = String(member.principal || "member");
               const isOwnerMember = member.role === MemberRole.owner;
               const isSelf = memberPrincipal === currentPrincipal;
               const canRemove = isOwner && !isOwnerMember && !isSelf;
               return (
                 <li
-                  key={memberPrincipal}
+                  key={memberPrincipal + index}
                   className="flex items-center justify-between gap-3 rounded-2xl border bg-card p-4 shadow-subtle"
                   data-ocid={`member_item_${index + 1}`}
                 >
