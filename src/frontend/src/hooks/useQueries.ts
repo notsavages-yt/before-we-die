@@ -280,16 +280,18 @@ export function useJoinJournal() {
 
       const me = getMyIdentity();
 
+      // Check if user already joined using user_id or legacy user_name
       const { data: existing } = await supabase
         .from("members")
         .select("id")
         .eq("journal_id", journalId)
-        .eq("user_name", me.name);
+        .or(`user_id.eq.${me.id},user_name.eq.${me.name}`);
 
       if (!existing || existing.length === 0) {
         await supabase.from("members").insert({
           journal_id: journalId,
           user_name: me.name,
+          user_id: me.id,
           role: MemberRole.member,
           joined_at: Date.now(),
         });
