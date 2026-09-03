@@ -144,17 +144,8 @@ export function Layout() {
       <footer className="border-t bg-card">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-muted-foreground sm:flex-row">
           <span>
-            © {new Date().getFullYear()}. Built by {"  "}
-            <a
-              href={`https://www.youtube.com/@notsavages=${encodeURIComponent(
-                window.location.hostname,
-              )}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-foreground underline-offset-4 hover:underline"
-            >
-              NOT SAVAGES
-            </a>
+            © {new Date().getFullYear()}. Built by NOT SAVAGES
+            
             .
           </span>
           <span className="font-display italic text-muted-foreground">
