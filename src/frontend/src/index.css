@@ -22,64 +22,60 @@
 
 @layer base {
   :root {
-    --font-display: "Fraunces", serif;
-    --font-body: "General Sans", sans-serif;
-    --font-mono: "JetBrains Mono", monospace;
-    --radius: 0.75rem;
+    /* Light Coffee Theme */
+    --background: 0.94 0.022 75;       /* Warm oat milk / cafe backdrop */
+    --foreground: 0.24 0.035 50;       /* Dark roasted espresso text */
+    --card: 0.97 0.014 78;             /* Steamed milk / light latte cards */
+    --card-foreground: 0.24 0.035 50;  /* Deep coffee text on cards */
+    --popover: 0.97 0.014 78;
+    --popover-foreground: 0.24 0.035 50;
 
-    /* Warm paper — the daylight echo of the night theme */
-    --background: 0.97 0.015 70;
-    --foreground: 0.18 0.025 45;
-    --card: 0.99 0.01 70;
-    --card-foreground: 0.18 0.025 45;
-    --popover: 0.99 0.01 70;
-    --popover-foreground: 0.18 0.025 45;
+    --primary: 0.48 0.095 55;          /* Warm mocha / rich caramel accent */
+    --primary-foreground: 0.98 0.01 75;
 
-    --primary: 0.5 0.14 45;
-    --primary-foreground: 0.97 0.01 45;
+    --secondary: 0.90 0.025 75;        /* Cream foam */
+    --secondary-foreground: 0.32 0.035 50;
+    --muted: 0.90 0.022 75;            /* Soft biscuit surface */
+    --muted-foreground: 0.52 0.03 55;  /* Hazelnut secondary text */
 
-    --secondary: 0.93 0.02 70;
-    --secondary-foreground: 0.28 0.025 45;
-    --muted: 0.93 0.02 70;
-    --muted-foreground: 0.5 0.02 45;
-
-    --accent: 0.55 0.12 22;
-    --accent-foreground: 0.97 0.01 22;
+    --accent: 0.88 0.035 65;           /* Toasted cinnamon highlight */
+    --accent-foreground: 0.24 0.035 50;
 
     --destructive: 0.55 0.22 25;
     --destructive-foreground: 0.97 0.01 25;
-    --success: 0.5 0.14 150;
-    --warning: 0.6 0.13 85;
+    --success: 0.55 0.12 145;
+    --warning: 0.65 0.12 80;
 
-    --border: 0.88 0.02 70;
-    --input: 0.88 0.02 70;
-    --ring: 0.5 0.14 45;
+    --border: 0.86 0.025 72;           /* Soft latte line dividers */
+    --input: 0.86 0.025 72;
+    --ring: 0.48 0.095 55;
 
-    --chart-1: 0.5 0.14 45;
-    --chart-2: 0.55 0.12 22;
-    --chart-3: 0.45 0.11 240;
-    --chart-4: 0.6 0.13 85;
-    --chart-5: 0.5 0.12 165;
+    --chart-1: 0.48 0.095 55;
+    --chart-2: 0.60 0.080 65;
+    --chart-3: 0.40 0.070 50;
+    --chart-4: 0.70 0.090 75;
+    --chart-5: 0.52 0.030 55;
 
-    --sidebar: 0.95 0.018 70;
-    --sidebar-foreground: 0.18 0.025 45;
-    --sidebar-primary: 0.5 0.14 45;
-    --sidebar-primary-foreground: 0.97 0.01 45;
-    --sidebar-accent: 0.91 0.02 70;
-    --sidebar-accent-foreground: 0.28 0.025 45;
-    --sidebar-border: 0.88 0.02 70;
-    --sidebar-ring: 0.5 0.14 45;
+    --sidebar: 0.92 0.025 75;
+    --sidebar-foreground: 0.24 0.035 50;
+    --sidebar-primary: 0.48 0.095 55;
+    --sidebar-primary-foreground: 0.98 0.01 75;
+    --sidebar-accent: 0.88 0.03 75;
+    --sidebar-accent-foreground: 0.24 0.035 50;
+    --sidebar-border: 0.86 0.025 72;
+    --sidebar-ring: 0.48 0.095 55;
 
-    /* Cinematic atmosphere */
+    /* Coffee gradient accents */
     --gradient-primary: linear-gradient(
       135deg,
-      oklch(0.74 0.16 65),
-      oklch(0.55 0.13 22)
+      oklch(0.58 0.11 55),
+      oklch(0.42 0.085 45)
     );
     --gradient-subtle: linear-gradient(
       180deg,
-      oklch(0.165 0.02 50),
-      oklch(0.13 0.018 50)
+      oklch(0.96 0.018 75),
+      oklch(0.93 0.022 75)
+    );
     );
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
