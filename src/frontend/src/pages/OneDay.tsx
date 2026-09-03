@@ -122,13 +122,13 @@ export function OneDay() {
               </p>
               <h2
                 className={`font-display text-4xl font-medium italic leading-[1.1] tracking-tight sm:text-6xl md:text-7xl ${
-                  current.completed ? "text-accent" : "text-primary"
+                  current.completed ? "text-accent" : "text-foreground"
                 }`}
               >
                 {current.title}
               </h2>
               {current.note ? (
-                <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-primary sm:text-xl">
+                <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
                   {current.note}
                 </p>
               ) : null}
